@@ -3,61 +3,90 @@
 #include <cmath>
 using namespace std;
 
-const double EPS = 1e-9;  // 誤差容許值（浮點數比較用）
+using Vector = vector<double>;
+using Matrix = vector<Vector>;
 
-double determinant(vector<vector<double>> matrix) {
-    int n = matrix.size();
-    double det = 1.0;
+// ========== 與 HW04 相同的函式 ==========
+double dot(const Vector& a, const Vector& b) {
+    double result = 0;
+    for (size_t i = 0; i < a.size(); ++i)
+        result += a[i] * b[i];
+    return result;
+}
 
-    for (int i = 0; i < n; ++i) {
-        // 找出目前列以下最大絕對值的列（pivot）
-        int pivot = i;
-        for (int j = i + 1; j < n; ++j) {
-            if (fabs(matrix[j][i]) > fabs(matrix[pivot][i])) {
-                pivot = j;
-            }
+double norm2(const Vector& v) {
+    return dot(v, v);
+}
+
+Vector subtract(const Vector& a, const Vector& b) {
+    Vector result(a.size());
+    for (size_t i = 0; i < a.size(); ++i)
+        result[i] = a[i] - b[i];
+    return result;
+}
+
+Vector scalarMul(const Vector& v, double scalar) {
+    Vector result(v.size());
+    for (size_t i = 0; i < v.size(); ++i)
+        result[i] = v[i] * scalar;
+    return result;
+}
+
+// Gram-Schmidt（HW04 導入）
+Matrix gramSchmidt(const Matrix& A) {
+    int m = A.size();       // 行數
+    Matrix Q;
+
+    for (int i = 0; i < m; ++i) {
+        Vector vi = A[i];
+
+        for (const auto& q : Q) {
+            double proj_coeff = dot(vi, q) / norm2(q);
+            vi = subtract(vi, scalarMul(q, proj_coeff));
         }
 
-        // 如果該列為0，行列式為0
-        if (fabs(matrix[pivot][i]) < EPS)
-            return 0.0;
-
-        // 換行：如果 pivot 不是 i，需改變符號
-        if (i != pivot) {
-            swap(matrix[i], matrix[pivot]);
-            det *= -1;
-        }
-
-        // 用 pivot 值更新行列式乘積
-        det *= matrix[i][i];
-
-        // 消去 i 列以下的其他列
-        for (int j = i + 1; j < n; ++j) {
-            double factor = matrix[j][i] / matrix[i][i];
-            for (int k = i; k < n; ++k) {
-                matrix[j][k] -= factor * matrix[i][k];
-            }
-        }
+        Q.push_back(vi);
     }
 
-    return det;
+    return Q;
+}
+// ========================================
+
+// 產生 1, x, x^2 的值向量（行向量）在 [-1, 1] 區間內
+Matrix generateLegendreBasis(int sampleCount) {
+    Matrix basis(3, Vector(sampleCount));
+    for (int i = 0; i < sampleCount; ++i) {
+        double x = -1.0 + 2.0 * i / (sampleCount - 1);
+        basis[0][i] = 1.0;
+        basis[1][i] = x;
+        basis[2][i] = x * x;
+    }
+    return basis;
+}
+
+void printMatrix(const Matrix& M) {
+    for (const auto& row : M) {
+        for (double val : row)
+            cout << val << " ";
+        cout << endl;
+    }
 }
 
 int main() {
-    int n;
-    cout << "請輸入方矩陣的大小 n: ";
-    cin >> n;
+    int sampleCount = 150;
 
-    vector<vector<double>> matrix(n, vector<double>(n));
+    cout << "正在生成標準基底（1, x, x^2）在 [-1, 1] 上的 " << sampleCount << " 個取樣點..." << endl;
 
-    cout << "請輸入矩陣內容（以空格分隔，每列換行）：" << endl;
-    for (int i = 0; i < n; ++i)
-        for (int j = 0; j < n; ++j)
-            cin >> matrix[i][j];
+    Matrix basis = generateLegendreBasis(sampleCount);
 
-    double result = determinant(matrix);
+    cout << "\n進行 Gram-Schmidt 正交化..." << endl;
+    Matrix Q = gramSchmidt(basis);
 
-    cout << "行列式的值為: " << result << endl;
+    cout << "\n正交後的三個向量（每行為向量在各取樣點的值）：" << endl;
+    printMatrix(Q);
+
+    cout << "\n可與雷建德多項式進行對比：" << endl;
+    cout << "P0(x) = 1\nP1(x) = x\nP2(x) = (3x^2 - 1)/2 ≈ x^2 - 1/3\n";
 
     return 0;
 }
