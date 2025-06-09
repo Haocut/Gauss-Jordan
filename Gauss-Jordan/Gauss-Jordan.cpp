@@ -1,66 +1,36 @@
 ﻿#include <iostream>
 #include <vector>
-#include <cmath>
+#include <iomanip>
 using namespace std;
 
-using Vector = vector<double>;
-using Matrix = vector<Vector>;
-
-// 向量內積
-double dot(const Vector& a, const Vector& b) {
-    double result = 0;
-    for (size_t i = 0; i < a.size(); ++i)
-        result += a[i] * b[i];
-    return result;
-}
-
-// 向量長度平方
-double norm2(const Vector& v) {
-    return dot(v, v);
-}
-
-// 向量減法
-Vector subtract(const Vector& a, const Vector& b) {
-    Vector result(a.size());
-    for (size_t i = 0; i < a.size(); ++i)
-        result[i] = a[i] - b[i];
-    return result;
-}
-
-// 向量乘以常數
-Vector scalarMul(const Vector& v, double scalar) {
-    Vector result(v.size());
-    for (size_t i = 0; i < v.size(); ++i)
-        result[i] = v[i] * scalar;
-    return result;
-}
-
-// Gram-Schmidt 正交化（對行向量）
-Matrix gramSchmidt(const Matrix& A) {
-    int m = A.size();       // 行數
-    Matrix Q;
+// 以行向量為單位進行 Gram-Schmidt 正交化
+vector<vector<double>> gram_schmidt_rows(const vector<vector<double>>& A) {
+    int m = A.size();       // 幾個向量（行數）
+    int n = A[0].size();    // 向量維度（列數）
+    vector<vector<double>> Q(m, vector<double>(n, 0.0));
 
     for (int i = 0; i < m; ++i) {
-        Vector vi = A[i];
+        Q[i] = A[i]; // 初始化為原始向量
 
-        for (const auto& q : Q) {
-            double proj_coeff = dot(vi, q) / norm2(q);
-            vi = subtract(vi, scalarMul(q, proj_coeff));
+        for (int j = 0; j < i; ++j) {
+            // 計算 Q[i] 與 Q[j] 的內積
+            double dot = 0, norm = 0;
+            for (int k = 0; k < n; ++k) {
+                dot += Q[i][k] * Q[j][k];
+                norm += Q[j][k] * Q[j][k];
+            }
+
+            // 投影係數
+            double coeff = (norm == 0) ? 0 : dot / norm;
+
+            // 從 Q[i] 減去 Q[j] 的投影部分
+            for (int k = 0; k < n; ++k) {
+                Q[i][k] -= coeff * Q[j][k];
+            }
         }
-
-        Q.push_back(vi);
     }
 
     return Q;
-}
-
-// 印出矩陣
-void printMatrix(const Matrix& M) {
-    for (const auto& row : M) {
-        for (double val : row)
-            cout << val << " ";
-        cout << endl;
-    }
 }
 
 int main() {
@@ -68,16 +38,22 @@ int main() {
     cout << "請輸入矩陣行數 m 與列數 n（n > m）: ";
     cin >> m >> n;
 
-    Matrix A(m, Vector(n));
-    cout << "請輸入矩陣（每列為一個向量）：" << endl;
+    vector<vector<double>> A(m, vector<double>(n));
+
+    cout << "請輸入矩陣，每行為一個向量（共 " << m << " 行，每行 " << n << " 個數）:\n";
     for (int i = 0; i < m; ++i)
         for (int j = 0; j < n; ++j)
             cin >> A[i][j];
 
-    Matrix Q = gramSchmidt(A);
+    vector<vector<double>> Q = gram_schmidt_rows(A);
 
-    cout << "\n正交化後的矩陣（每列為一個正交基底向量）：" << endl;
-    printMatrix(Q);
+    cout << fixed << setprecision(10);
+    cout << "\n正交化後的行向量結果（每行為一個正交向量）：\n";
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j)
+            cout << Q[i][j] << " ";
+        cout << "\n";
+    }
 
     return 0;
 }
